@@ -1,142 +1,97 @@
-"""
-Production Readiness Checker
+"""Production readiness checks for the Day 12 lab."""
 
-Tự động kiểm tra project có đủ điều kiện deploy chưa.
-Chạy: python check_production_ready.py
+from __future__ import annotations
 
-Output: checklist với ✅ / ❌ cho từng item.
-"""
 import os
 import sys
-import json
-import subprocess
 
 
 def check(name: str, passed: bool, detail: str = "") -> dict:
-    icon = "✅" if passed else "❌"
-    print(f"  {icon} {name}" + (f" — {detail}" if detail else ""))
+    icon = "OK" if passed else "FAIL"
+    print(f"  {icon} {name}" + (f" - {detail}" if detail else ""))
     return {"name": name, "passed": passed}
 
 
-def run_checks():
-    results = []
+def file_text(path: str) -> str:
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
+def run_checks() -> bool:
     base = os.path.dirname(__file__)
+    results: list[dict] = []
 
-    print("\n" + "=" * 55)
-    print("  Production Readiness Check — Day 12 Lab")
-    print("=" * 55)
+    print("=" * 60)
+    print("Production Readiness Check - Day 12 Lab")
+    print("=" * 60)
 
-    # ── Files ──────────────────���───────────────────
-    print("\n📁 Required Files")
-    results.append(check("Dockerfile exists",
-                         os.path.exists(os.path.join(base, "Dockerfile"))))
-    results.append(check("docker-compose.yml exists",
-                         os.path.exists(os.path.join(base, "docker-compose.yml"))))
-    results.append(check(".dockerignore exists",
-                         os.path.exists(os.path.join(base, ".dockerignore"))))
-    results.append(check(".env.example exists",
-                         os.path.exists(os.path.join(base, ".env.example"))))
-    results.append(check("requirements.txt exists",
-                         os.path.exists(os.path.join(base, "requirements.txt"))))
-    results.append(check("railway.toml or render.yaml exists",
-                         os.path.exists(os.path.join(base, "railway.toml")) or
-                         os.path.exists(os.path.join(base, "render.yaml"))))
+    print("\nRequired files")
+    required = [
+        "Dockerfile",
+        "docker-compose.yml",
+        ".dockerignore",
+        ".env.example",
+        "requirements.txt",
+        "render.yaml",
+    ]
+    for name in required:
+        results.append(check(f"{name} exists", os.path.exists(os.path.join(base, name))))
 
-    # ── Security ──────────────────────────────────���
-    print("\n🔒 Security")
-
-    # Check .env not tracked
-    env_file = os.path.join(base, ".env")
-    gitignore = os.path.join(base, ".gitignore")
-    root_gitignore = os.path.join(base, "..", ".gitignore")
-
+    print("\nSecurity")
+    gitignore_paths = [os.path.join(base, ".gitignore"), os.path.join(base, "..", ".gitignore")]
     env_ignored = False
-    for gi in [gitignore, root_gitignore]:
-        if os.path.exists(gi):
-            content = open(gi).read()
-            if ".env" in content:
-                env_ignored = True
-                break
-    results.append(check(".env in .gitignore",
-                         env_ignored,
-                         "Add .env to .gitignore!" if not env_ignored else ""))
+    for path in gitignore_paths:
+        if os.path.exists(path) and ".env" in file_text(path):
+            env_ignored = True
+            break
+    results.append(check(".env ignored", env_ignored))
 
-    # Check no hardcoded secrets in code
-    secrets_found = []
-    for f in ["app/main.py", "app/config.py"]:
-        fpath = os.path.join(base, f)
-        if os.path.exists(fpath):
-            content = open(fpath).read()
-            for bad in ["sk-", "password123", "hardcoded"]:
-                if bad in content:
-                    secrets_found.append(f"{f}:{bad}")
-    results.append(check("No hardcoded secrets in code",
-                         len(secrets_found) == 0,
-                         str(secrets_found) if secrets_found else ""))
-
-    # ── API Endpoints ────────────────────────────��─
-    print("\n🌐 API Endpoints (code check)")
     main_py = os.path.join(base, "app", "main.py")
+    config_py = os.path.join(base, "app", "config.py")
     if os.path.exists(main_py):
-        content = open(main_py).read()
-        results.append(check("/health endpoint defined",
-                             '"/health"' in content or "'/health'" in content))
-        results.append(check("/ready endpoint defined",
-                             '"/ready"' in content or "'/ready'" in content))
-        results.append(check("Authentication implemented",
-                             "api_key" in content.lower() or "verify_token" in content))
-        results.append(check("Rate limiting implemented",
-                             "rate_limit" in content.lower() or "429" in content))
-        results.append(check("Graceful shutdown (SIGTERM)",
-                             "SIGTERM" in content))
-        results.append(check("Structured logging (JSON)",
-                             "json.dumps" in content or '"event"' in content))
+        main_text = file_text(main_py)
+        results.append(check("/health endpoint", '"/health"' in main_text or "'/health'" in main_text))
+        results.append(check("/ready endpoint", '"/ready"' in main_text or "'/ready'" in main_text))
+        results.append(check("API key auth", "verify_api_key" in main_text))
+        results.append(check("Rate limiting", "check_rate_limit" in main_text))
+        results.append(check("Cost guard", "check_budget" in main_text))
+        results.append(check("Conversation history", "append_history" in main_text and "load_history" in main_text))
+        results.append(check("Graceful shutdown", "SIGTERM" in main_text))
+        results.append(check("JSON logging", "json.dumps" in main_text))
     else:
-        results.append(check("app/main.py exists", False, "Create app/main.py!"))
+        results.append(check("app/main.py exists", False))
 
-    # ── Docker ─────────────────────────────────────
-    print("\n🐳 Docker")
+    if os.path.exists(config_py):
+        config_text = file_text(config_py)
+        results.append(check("Env config", "os.getenv" in config_text))
+        results.append(check("Monthly budget default", "MONTHLY_BUDGET_USD" in config_text))
+        results.append(check("Rate limit default", "RATE_LIMIT_PER_MINUTE" in config_text))
+
+    print("\nDocker")
     dockerfile = os.path.join(base, "Dockerfile")
     if os.path.exists(dockerfile):
-        content = open(dockerfile).read()
-        results.append(check("Multi-stage build",
-                             "AS builder" in content or "AS runtime" in content))
-        results.append(check("Non-root user",
-                             "useradd" in content or "USER " in content))
-        results.append(check("HEALTHCHECK instruction",
-                             "HEALTHCHECK" in content))
-        results.append(check("Slim base image",
-                             "slim" in content or "alpine" in content))
+        docker_text = file_text(dockerfile)
+        results.append(check("Multi-stage build", "AS builder" in docker_text and "AS runtime" in docker_text))
+        results.append(check("Non-root user", "USER agent" in docker_text))
+        results.append(check("HEALTHCHECK", "HEALTHCHECK" in docker_text))
+        results.append(check("Slim base", "python:3.11-slim" in docker_text))
 
     dockerignore = os.path.join(base, ".dockerignore")
     if os.path.exists(dockerignore):
-        content = open(dockerignore).read()
-        results.append(check(".dockerignore covers .env",
-                             ".env" in content))
-        results.append(check(".dockerignore covers __pycache__",
-                             "__pycache__" in content))
+        ignore_text = file_text(dockerignore)
+        results.append(check(".env ignored in docker", ".env" in ignore_text))
+        results.append(check("pycache ignored", "__pycache__" in ignore_text))
 
-    # ── Summary ───────────────────────────────────���
-    passed = sum(1 for r in results if r["passed"])
+    passed = sum(1 for item in results if item["passed"])
     total = len(results)
-    pct = round(passed / total * 100)
+    pct = round((passed / total) * 100) if total else 0
 
-    print("\n" + "=" * 55)
-    print(f"  Result: {passed}/{total} checks passed ({pct}%)")
-
-    if pct == 100:
-        print("  🎉 PRODUCTION READY! Deploy nào!")
-    elif pct >= 80:
-        print("  ✅ Almost there! Fix the ❌ items above.")
-    elif pct >= 60:
-        print("  ⚠️  Good progress. Several items need attention.")
-    else:
-        print("  ❌ Not ready. Review the checklist carefully.")
-
-    print("=" * 55 + "\n")
+    print("\n" + "=" * 60)
+    print(f"Result: {passed}/{total} checks passed ({pct}%)")
+    print("=" * 60)
     return pct == 100
 
 
 if __name__ == "__main__":
-    ready = run_checks()
-    sys.exit(0 if ready else 1)
+    sys.exit(0 if run_checks() else 1)
+

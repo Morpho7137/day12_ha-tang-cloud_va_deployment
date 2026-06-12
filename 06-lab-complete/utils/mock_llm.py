@@ -1,4 +1,4 @@
-"""Mock LLM used by all examples in the repo."""
+"""Local copy of the repo mock LLM for the complete lab project."""
 
 from __future__ import annotations
 
@@ -31,7 +31,6 @@ def _extract_name(history: list[dict]) -> str | None:
 
 
 def ask(question: str, delay: float = 0.1, history: list[dict] | None = None) -> str:
-    """Return a deterministic mock answer with optional conversation context."""
     time.sleep(delay + random.uniform(0, 0.05))
     history = history or []
     question_lower = question.lower()
