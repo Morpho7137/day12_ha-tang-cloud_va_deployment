@@ -30,5 +30,5 @@ services:
     name: day12-redis
     plan: starter
     region: singapore
+    ipAllowList: []
     maxmemoryPolicy: allkeys-lru
-
