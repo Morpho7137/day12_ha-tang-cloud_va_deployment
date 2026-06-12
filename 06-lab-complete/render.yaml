@@ -3,7 +3,7 @@ services:
     name: day12-agent
     runtime: docker
     rootDir: 06-lab-complete
-    plan: starter
+    plan: free
     region: singapore
     healthCheckPath: /health
     autoDeploy: true
@@ -28,7 +28,7 @@ services:
 
   - type: redis
     name: day12-redis
-    plan: starter
+    plan: free
     region: singapore
     ipAllowList: []
     maxmemoryPolicy: allkeys-lru
