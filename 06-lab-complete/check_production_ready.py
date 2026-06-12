@@ -56,6 +56,7 @@ def run_checks() -> bool:
         results.append(check("Rate limiting", "check_rate_limit" in main_text))
         results.append(check("Cost guard", "check_budget" in main_text))
         results.append(check("Conversation history", "append_history" in main_text and "load_history" in main_text))
+        results.append(check("Group RAG endpoint", '"/chat"' in main_text and "generate_answer" in main_text))
         results.append(check("Graceful shutdown", "SIGTERM" in main_text))
         results.append(check("JSON logging", "json.dumps" in main_text))
     else:
@@ -66,6 +67,18 @@ def run_checks() -> bool:
         results.append(check("Env config", "os.getenv" in config_text))
         results.append(check("Monthly budget default", "MONTHLY_BUDGET_USD" in config_text))
         results.append(check("Rate limit default", "RATE_LIMIT_PER_MINUTE" in config_text))
+
+    rag_py = os.path.join(base, "app", "rag.py")
+    if os.path.exists(rag_py):
+        rag_text = file_text(rag_py)
+        results.append(check("BM25 retrieval", "BM25Okapi" in rag_text))
+        results.append(check("Cited fallback", "_fallback_answer" in rag_text))
+    results.append(
+        check(
+            "Group-project index",
+            os.path.exists(os.path.join(base, "data", "index", "chunks.json")),
+        )
+    )
 
     print("\nDocker")
     dockerfile = os.path.join(base, "Dockerfile")
@@ -94,4 +107,3 @@ def run_checks() -> bool:
 
 if __name__ == "__main__":
     sys.exit(0 if run_checks() else 1)
-

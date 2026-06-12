@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -26,6 +27,7 @@ def current_minute_window(now: datetime | None = None) -> int:
 class StorageState:
     redis_client: redis.Redis | None
     in_memory: dict[str, object]
+    last_failed_at: float = 0.0
 
 
 _state = StorageState(redis_client=None, in_memory={})
@@ -34,13 +36,21 @@ _state = StorageState(redis_client=None, in_memory={})
 def get_redis() -> redis.Redis | None:
     if _state.redis_client is not None:
         return _state.redis_client
+    if time.monotonic() - _state.last_failed_at < 5:
+        return None
     try:
-        client = redis.from_url(settings.redis_url, decode_responses=True)
+        client = redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=0.25,
+            socket_timeout=0.25,
+        )
         client.ping()
         _state.redis_client = client
         return client
     except Exception:
         _state.redis_client = None
+        _state.last_failed_at = time.monotonic()
         return None
 
 
@@ -156,4 +166,3 @@ def get_budget_spend(user_id: str) -> float:
     if client is not None:
         return float(client.get(key) or 0.0)
     return float(_state.in_memory.get(key, 0.0))
-

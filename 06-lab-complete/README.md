@@ -1,70 +1,47 @@
-# Lab 12 - Complete Production Agent
+# Day 12 - Productionized Group RAG Agent
 
-This folder contains the final production-ready version of the Day 12 lab.
+This is the production deployment of the Vietnamese drug-law RAG chatbot from
+`Morpho7137/2A202600677_Nguyen-Anh-Kiet`, adapted for the Day 12 assignment.
 
-## What it includes
+## Production Features
 
-- Multi-stage Docker image with a non-root runtime user
-- Redis-backed conversation history, rate limiting, and monthly cost tracking
-- `GET /health` and `GET /ready`
-- API key authentication
-- Structured JSON logs
-- Graceful shutdown handling
-- Render and Railway deployment configs
+- Group-project BM25 retrieval over the checked-in legal/news index
+- Optional OpenAI generation with a cited local fallback
+- `POST /chat` compatibility with the original group API
+- `POST /ask` with Redis-backed server-side conversation history
+- API key authentication, rate limiting, and monthly cost guard
+- Health/readiness endpoints, structured logs, and graceful shutdown
+- Multi-stage non-root Docker image
+- Render Blueprint with free web and Redis services
 
-## Local run
+## Local Run
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Health check:
-
 ```bash
-curl http://localhost/health
-```
+curl http://localhost:8000/health
 
-Agent call:
-
-```bash
-curl -X POST http://localhost/ask \
+curl -X POST http://localhost:8000/ask \
   -H "X-API-Key: dev-key-change-me" \
   -H "Content-Type: application/json" \
-  -d '{"user_id":"test","question":"What is deployment?"}'
+  -d '{"user_id":"demo","question":"Quy dinh ve cai nghien ma tuy la gi?"}'
 ```
 
-## Repository layout
-
-```text
-06-lab-complete/
-├── app/
-│   ├── main.py
-│   ├── config.py
-│   ├── auth.py
-│   ├── storage.py
-│   ├── rate_limiter.py
-│   └── cost_guard.py
-├── utils/
-│   └── mock_llm.py
-├── Dockerfile
-├── docker-compose.yml
-├── railway.toml
-├── render.yaml
-├── .env.example
-└── check_production_ready.py
-```
+Interactive API documentation is available at `http://localhost:8000/docs`.
 
 ## Deployment
 
-- Railway uses the Dockerfile in this folder and `railway.toml`.
-- Render uses `render.yaml` with a web service and a Redis service.
+The repository-level `render.yaml` deploys `day12-agent` and `day12-redis`.
 
-## Readiness check
+Public API: `https://day12-agent-pjde.onrender.com`
+
+Free Render instances can take about 50 seconds to wake after inactivity.
+
+## Verification
 
 ```bash
 python check_production_ready.py
 ```
-
-The checker validates the expected files and the key production behaviors in source.
-

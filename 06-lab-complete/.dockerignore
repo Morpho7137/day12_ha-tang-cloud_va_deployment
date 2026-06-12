@@ -9,3 +9,6 @@ venv/
 *.md
 tests/
 .DS_Store
+data/*
+!data/index/
+!data/index/chunks.json

@@ -34,3 +34,6 @@ Thumbs.db
 # ── Docker volumes (local dev) ─────────────────────��──────
 data/
 volumes/
+!06-lab-complete/data/
+!06-lab-complete/data/index/
+!06-lab-complete/data/index/chunks.json

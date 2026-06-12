@@ -26,7 +26,7 @@ WORKDIR /app
 
 COPY --from=builder /install /usr/local
 COPY app/ ./app/
-COPY utils/ ./utils/
+COPY data/index/chunks.json ./data/index/chunks.json
 
 RUN chown -R agent:agent /app
 

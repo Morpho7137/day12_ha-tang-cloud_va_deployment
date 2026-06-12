@@ -18,9 +18,9 @@ class Settings:
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
     debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
 
-    app_name: str = field(default_factory=lambda: os.getenv("APP_NAME", "Production AI Agent"))
+    app_name: str = field(default_factory=lambda: os.getenv("APP_NAME", "Vietnamese Drug-Law RAG Agent"))
     app_version: str = field(default_factory=lambda: os.getenv("APP_VERSION", "1.0.0"))
-    llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "mock-llm"))
+    llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "gpt-4o-mini"))
 
     openai_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
     agent_api_key: str = field(default_factory=lambda: os.getenv("AGENT_API_KEY", "dev-key-change-me"))
@@ -44,4 +44,3 @@ class Settings:
 
 
 settings = Settings().validate()
-
